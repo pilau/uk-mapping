@@ -34,7 +34,7 @@ class Pilau_UK_Mapping {
 	 *
 	 * @var      string
 	 */
-	protected $plugin_slug = 'pilau-uk-mapping';
+	protected $plugin_slug = 'pukm';
 
 	/**
 	 * Instance of this class.
