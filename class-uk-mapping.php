@@ -1,0 +1,288 @@
+<?php
+/**
+ * Sources and Footnotes
+ *
+ * @package   UK_Mapping
+ * @author    Steve Taylor
+ * @license   GPL-2.0+
+ */
+
+/**
+ * Plugin class
+ *
+ * @package UK_Mapping
+ * @author  Steve Taylor
+ */
+class Pilau_UK_Mapping {
+
+	/**
+	 * Plugin version, used for cache-busting of style and script file references.
+	 *
+	 * @since   0.1
+	 *
+	 * @var     string
+	 */
+	protected $version = '0.1';
+
+	/**
+	 * Unique identifier for your plugin.
+	 *
+	 * Use this value (not the variable name) as the text domain when internationalizing strings of text. It should
+	 * match the Text Domain file header in the main plugin file.
+	 *
+	 * @since    0.1
+	 *
+	 * @var      string
+	 */
+	protected $plugin_slug = 'pilau-uk-mapping';
+
+	/**
+	 * Instance of this class.
+	 *
+	 * @since    0.1
+	 *
+	 * @var      object
+	 */
+	protected static $instance = null;
+
+	/**
+	 * Slug of the plugin screen.
+	 *
+	 * @since    0.1
+	 *
+	 * @var      string
+	 */
+	protected $plugin_screen_hook_suffix = null;
+
+	/**
+	 * The plugin's settings.
+	 *
+	 * @since    0.1
+	 *
+	 * @var      array
+	 */
+	protected $settings = null;
+
+	/**
+	 * Initialize the plugin by setting localization, filters, and administration functions.
+	 *
+	 * @since     0.1
+	 */
+	private function __construct() {
+
+		// Global init
+		add_action( 'init', array( $this, 'init' ) );
+
+		// Admin init
+		add_action( 'admin_init', array( $this, 'admin_init' ) );
+
+		// Add the admin page and menu item.
+		add_action( 'admin_menu', array( $this, 'add_plugin_admin_page_menu' ) );
+		add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
+
+		// Load admin style sheet and JavaScript.
+		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_styles' ) );
+		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+
+		// Other hooks
+		add_action( 'init', array( $this, 'register_custom_post_types' ), 0 );
+		add_action( 'init', array( $this, 'register_custom_taxonomies' ), 0 );
+
+	}
+
+	/**
+	 * Return an instance of this class.
+	 *
+	 * @since     0.1
+	 *
+	 * @return    object    A single instance of this class.
+	 */
+	public static function get_instance() {
+
+		// If the single instance hasn't been set, set it now.
+		if ( null == self::$instance ) {
+			self::$instance = new self;
+		}
+
+		return self::$instance;
+	}
+
+	/**
+	 * Fired when the plugin is activated.
+	 *
+	 * @since    0.1
+	 *
+	 * @param    boolean    $network_wide    True if WPMU superadmin uses "Network Activate" action, false if WPMU is disabled or plugin is activated on an individual blog.
+	 */
+	public static function activate( $network_wide ) {
+
+		// This is a trick used to get around the difficulty of adding hooks and calling non-static methods here
+		// The actual activation stuff is done in admin_init
+		// @link http://codex.wordpress.org/Function_Reference/register_activation_hook#Process_Flow
+		add_option( __CLASS__ . '_activating', 1 );
+
+	}
+
+	/**
+	 * Fired when the plugin is deactivated.
+	 *
+	 * @since    0.1
+	 *
+	 * @param    boolean    $network_wide    True if WPMU superadmin uses "Network Deactivate" action, false if WPMU is disabled or plugin is deactivated on an individual blog.
+	 */
+	public static function deactivate( $network_wide ) {
+
+	}
+
+	/**
+	 * Initialize
+	 *
+	 * @since    0.1
+	 */
+	public function init() {
+
+		// Load plugin text domain
+		$domain = $this->plugin_slug;
+		$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
+		load_textdomain( $domain, WP_LANG_DIR . '/' . $domain . '/' . $domain . '-' . $locale . '.mo' );
+		load_plugin_textdomain( $domain, FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
+
+	}
+
+	/**
+	 * Initialize admin
+	 *
+	 * @since	0.1
+	 * @return	void
+	 */
+	public function admin_init() {
+
+		// Any activation stuff to do?
+		if ( get_option( __CLASS__ . '_activating' ) ) {
+
+			// Clear activation flag
+			delete_option( __CLASS__ . '_activating' );
+
+		}
+
+	}
+
+	/**
+	 * Register and enqueue admin-specific style sheet.
+	 *
+	 * @since     0.1
+	 *
+	 * @return    null    Return early if no settings page is registered.
+	 */
+	public function enqueue_admin_styles() {
+		$screen = get_current_screen();
+
+		if ( in_array( $screen->id, array() ) ) {
+			wp_enqueue_style( $this->plugin_slug .'-admin-styles', plugins_url( 'css/admin.css', __FILE__ ), array(), $this->version );
+		}
+
+	}
+
+	/**
+	 * Register and enqueue admin-specific JavaScript.
+	 *
+	 * @since     0.1
+	 *
+	 * @return    null    Return early if no settings page is registered.
+	 */
+	public function enqueue_admin_scripts() {
+		$screen = get_current_screen();
+
+		if ( in_array( $screen->id, array() ) ) {
+			$script = defined( 'WP_LOCAL_DEV' ) && WP_LOCAL_DEV ? plugins_url( 'js/admin.js', __FILE__ ) : plugins_url( 'js/admin.min.js', __FILE__ );
+			wp_enqueue_script( $this->plugin_slug . '-admin-script', $script, array( 'jquery' ), $this->version );
+		}
+
+	}
+
+	/**
+	 * Register and enqueue public-facing style sheet.
+	 *
+	 * @since    0.1
+	 */
+	public function enqueue_styles() {
+		wp_enqueue_style( $this->plugin_slug . '-plugin-styles', plugins_url( 'css/public.css', __FILE__ ), array(), $this->version );
+	}
+
+	/**
+	 * Register and enqueues public-facing JavaScript files.
+	 *
+	 * @since    0.1
+	 */
+	public function enqueue_scripts() {
+		$script = defined( 'WP_LOCAL_DEV' ) && WP_LOCAL_DEV ? plugins_url( 'js/public.js', __FILE__ ) : plugins_url( 'js/public.min.js', __FILE__ );
+		wp_enqueue_script( $this->plugin_slug . '-plugin-script', $script, array( 'jquery', 'jquery-ui-tooltip' ), $this->version );
+	}
+
+	/**
+	 * Register the administration menu for this plugin into the WordPress Dashboard menu.
+	 *
+	 * @since    0.1
+	 */
+	public function add_plugin_admin_page_menu() {
+
+		$this->plugin_screen_hook_suffix = add_menu_page(
+			__( 'UK mapping', $this->plugin_slug ),
+			__( 'UK mapping', $this->plugin_slug ),
+			'update_core',
+			$this->plugin_slug,
+			array( $this, 'display_plugin_admin_page' ),
+			'dashicons-location-alt',
+			80
+		);
+
+	}
+
+	/**
+	 * Render the settings page for this plugin.
+	 *
+	 * @since    0.1
+	 */
+	public function display_plugin_admin_page() {
+		include_once( 'views/admin.php' );
+	}
+
+	/**
+	 * Process the admin page for this plugin.
+	 *
+	 * @since    0.1
+	 */
+	public function process_plugin_admin_page() {
+
+		// Submitted?
+		if ( isset( $_POST[ $this->plugin_slug . '_admin_page_admin_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_admin_page', $this->plugin_slug . '_admin_page_admin_nonce' ) ) {
+
+
+			// Redirect
+			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '&done=1' ) );
+
+		}
+
+	}
+
+	/**
+	 * Register custom post types
+	 *
+	 * @since	0.1
+	 */
+	public function register_custom_post_types() {
+
+
+	}
+
+	/**
+	 * Register custom taxonomies
+	 *
+	 * @since	0.1
+	 */
+	public function register_custom_taxonomies() {
+
+
+	}
+
+}
