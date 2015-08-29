@@ -19,7 +19,6 @@ class Pilau_UK_Mapping {
 	 * Plugin version, used for cache-busting of style and script file references.
 	 *
 	 * @since   0.1
-	 *
 	 * @var     string
 	 */
 	protected $version = '0.1';
@@ -31,7 +30,6 @@ class Pilau_UK_Mapping {
 	 * match the Text Domain file header in the main plugin file.
 	 *
 	 * @since    0.1
-	 *
 	 * @var      string
 	 */
 	protected $plugin_slug = 'pukm';
@@ -40,7 +38,6 @@ class Pilau_UK_Mapping {
 	 * Instance of this class.
 	 *
 	 * @since    0.1
-	 *
 	 * @var      object
 	 */
 	protected static $instance = null;
@@ -49,7 +46,6 @@ class Pilau_UK_Mapping {
 	 * Slug of the plugin screen.
 	 *
 	 * @since    0.1
-	 *
 	 * @var      string
 	 */
 	protected $plugin_screen_hook_suffix = null;
@@ -58,10 +54,45 @@ class Pilau_UK_Mapping {
 	 * The plugin's settings.
 	 *
 	 * @since    0.1
-	 *
 	 * @var      array
 	 */
 	protected $settings = null;
+
+	/**
+	 * The raw area codes table name (without prefix)
+	 *
+	 * @since    0.1
+	 * @var      string
+	 */
+	protected $table_area_codes_raw = 'pukm_area_codes_raw';
+
+	/**
+	 * The raw postcodes table name (without prefix)
+	 *
+	 * @since    0.1
+	 * @var      string
+	 */
+	protected $table_postcodes_raw = 'pukm_postcodes_raw';
+
+	/**
+	 * Is the raw data present?
+	 *
+	 * @since    0.1
+	 * @var      boolean
+	 */
+	protected $raw_data_present = false;
+
+	/**
+	 * Code type equivalents
+	 *
+	 * @since    0.1
+	 * @var      array
+	 */
+	protected $code_type_equivalents = array(
+		'cty'	=> array( 'cty' ),
+		'dis'	=> array( 'dis', 'lbo', 'mtd', 'uta' ),
+		'diw'	=> array( 'diw', 'lbw', 'mtw', 'utw' ),
+	);
 
 	/**
 	 * Initialize the plugin by setting localization, filters, and administration functions.
@@ -77,16 +108,16 @@ class Pilau_UK_Mapping {
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 
 		// Add the admin page and menu item.
-		add_action( 'admin_menu', array( $this, 'add_plugin_admin_page_menu' ) );
-		add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
+		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menus' ) );
+		//add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
 
 		// Load admin style sheet and JavaScript.
 		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_styles' ) );
 		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 
 		// Other hooks
-		add_action( 'init', array( $this, 'register_custom_post_types' ), 0 );
-		add_action( 'init', array( $this, 'register_custom_taxonomies' ), 0 );
+		//add_action( 'init', array( $this, 'register_custom_post_types' ), 0 );
+		//add_action( 'init', array( $this, 'register_custom_taxonomies' ), 0 );
 
 	}
 
@@ -146,6 +177,16 @@ class Pilau_UK_Mapping {
 		$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
 		load_textdomain( $domain, WP_LANG_DIR . '/' . $domain . '/' . $domain . '-' . $locale . '.mo' );
 		load_plugin_textdomain( $domain, FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
+
+		// Admin stuff that needs to happen early, e.g. before admin_menu
+		if ( is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
+			global $wpdb;
+
+			// Is the raw data present?
+			$tables = $wpdb->get_col( "SHOW TABLES" );
+			$this->raw_data_present = in_array( $this->table_area_codes_raw, $tables ) && in_array( $this->table_postcodes_raw, $tables );
+
+		}
 
 	}
 
@@ -220,12 +261,13 @@ class Pilau_UK_Mapping {
 	}
 
 	/**
-	 * Register the administration menu for this plugin into the WordPress Dashboard menu.
+	 * Register the administration menus for this plugin.
 	 *
 	 * @since    0.1
 	 */
-	public function add_plugin_admin_page_menu() {
+	public function add_plugin_admin_menus() {
 
+		// Main page
 		$this->plugin_screen_hook_suffix = add_menu_page(
 			__( 'UK mapping', $this->plugin_slug ),
 			__( 'UK mapping', $this->plugin_slug ),
@@ -233,18 +275,39 @@ class Pilau_UK_Mapping {
 			$this->plugin_slug,
 			array( $this, 'display_plugin_admin_page' ),
 			'dashicons-location-alt',
-			80
+			81
 		);
+
+		// Raw data queries
+		if ( $this->raw_data_present ) {
+			add_submenu_page(
+				$this->plugin_slug,
+				__( 'Raw data queries', $this->plugin_slug ),
+				__( 'Raw data', $this->plugin_slug ),
+				'update_core',
+				$this->plugin_slug . '_raw_data',
+				array( $this, 'display_plugin_raw_page' )
+			);
+		}
 
 	}
 
 	/**
-	 * Render the settings page for this plugin.
+	 * Render the admin page for this plugin.
 	 *
 	 * @since    0.1
 	 */
 	public function display_plugin_admin_page() {
 		include_once( 'views/admin.php' );
+	}
+
+	/**
+	 * Render the raw data page for this plugin.
+	 *
+	 * @since    0.1
+	 */
+	public function display_plugin_raw_page() {
+		include_once( 'views/raw-data.php' );
 	}
 
 	/**

@@ -7,6 +7,7 @@
  * @author    Steve Taylor
  * @license   GPL-2.0+
  */
+global $wpdb;
 
 ?>
 
@@ -22,8 +23,7 @@
 
 		<?php wp_nonce_field( $this->plugin_slug . '_admin_page', $this->plugin_slug . '_admin_page_admin_nonce' ); ?>
 
-
-		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Save settings"></p>
+		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Submit', $this->plugin_slug ); ?>"></p>
 
 	</form>
 
