@@ -55,6 +55,10 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 		?>
 
+	<?php } else if ( $_GET['kml'] ) { ?>
+
+		<p><em><?php _e( 'KML imported successfully.' ); ?></em></p>
+
 	<?php } ?>
 
 	<form method="post" action="">
@@ -89,5 +93,44 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Do query', $this->plugin_slug ); ?>"></p>
 
 	</form>
+
+
+	<h2><?php _e( 'KML import', $this->plugin_sliug ); ?></h2>
+
+	<?php if ( $this->import_kml ) { ?>
+
+		<form method="post" action="">
+
+			<?php wp_nonce_field( $this->plugin_slug . '_kml_import', $this->plugin_slug . '_kml_import_nonce' ); ?>
+
+			<table class="form-table">
+				<tbody>
+					<tr valign="top">
+						<td>
+							<?php foreach( $this->import_kml as $kml_file ) { ?>
+								<?php $filename_full =  basename( $kml_file ); ?>
+								<?php $filename = str_replace( '.kml', '', $filename_full ); ?>
+								<?php $filename_safe = esc_attr( $filename ); ?>
+								<label for="<?php echo $filename_safe; ?>"><input type="radio" name="<?php echo $filename_safe; ?>" id="<?php echo $filename_safe; ?>" value="1"> <?php echo $filename_full; ?></label>
+							<?php } ?>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Import KML file', $this->plugin_slug ); ?>"></p>
+
+		</form>
+
+		<?php
+
+	} else {
+
+		echo '<p><em>' . __( 'No KML files to import' ) . '</em></p>';
+
+	}
+
+	?>
+
 
 </div>

@@ -114,6 +114,14 @@ class Pilau_UK_Mapping {
 	);
 
 	/**
+	 * KML files to import
+	 *
+	 * @since    0.1
+	 * @var      array
+	 */
+	protected $import_kml = null;
+
+	/**
 	 * Initialize the plugin by setting localization, filters, and administration functions.
 	 *
 	 * @since     0.1
@@ -326,6 +334,7 @@ class Pilau_UK_Mapping {
 	 * @since    0.1
 	 */
 	public function display_plugin_raw_page() {
+		$this->import_kml = glob( trailingslashit( plugin_dir_path( __FILE__ ) ) . 'import-data/*.kml' );
 		include_once( 'views/raw-data.php' );
 	}
 
@@ -342,6 +351,25 @@ class Pilau_UK_Mapping {
 
 			// Redirect
 			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '&done=1' ) );
+
+		}
+
+	}
+
+	/**
+	 * Process the KML raw data import
+	 *
+	 * @since    0.1
+	 */
+	public function process_kml_import() {
+
+		// Submitted?
+		if ( isset( $_POST[ $this->plugin_slug . '_kml_import_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_kml_import', $this->plugin_slug . '_kml_import_nonce' ) ) {
+
+
+
+			// Redirect
+			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '_raw_data' . '&kml=1' ) );
 
 		}
 
