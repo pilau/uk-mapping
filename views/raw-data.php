@@ -20,22 +20,38 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 		<?php
 
-		// Build area code equivalents
-		$area_code_equivalents = array();
-		foreach ( $this->code_type_equivalents[ $_POST[$this->plugin_slug . '-raw-area-type'] ] as $code_type ) {
-			$area_code_equivalents[] = ' ac.code_type = \'' . strtoupper( $code_type ) . '\'';
+		// If trying to get county, try to get "district" if there's no county (i.e. top-level authority is unitary or metropolitan)
+		$attempt_authority_levels = array( $_POST[$this->plugin_slug . '-raw-area-type'] );
+		if ( $_POST[$this->plugin_slug . '-raw-area-type'] == 'cty' ) {
+			$attempt_authority_levels[] = 'dis';
+		}
+		foreach ( $attempt_authority_levels as $attempt_authority_level ) {
+
+			// Build area code equivalents
+			$area_code_equivalents = array();
+			foreach ( $this->code_type_equivalents[ $attempt_authority_level ] as $code_type ) {
+				$area_code_equivalents[] = ' ac.code_type = \'' . strtoupper( $code_type ) . '\'';
+			}
+
+			// Do query
+			$sql = "
+				SELECT	ac.code_type, ac.area_title
+				FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
+				WHERE	pc.postcode LIKE '" . strtoupper( $_POST[$this->plugin_slug . '-raw-postcode'] ) . "%'
+				AND		pc." . $attempt_authority_level . "_code	= ac.code
+				AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
+			";
+			//echo '<pre>'; print_r( $sql ); echo '</pre>'; exit;
+			$area_details = $wpdb->get_row( $sql );
+
+			// Break if we've got a result
+			if ( $area_details ) {
+				break;
+			}
+
 		}
 
-		// Do query
-		$area = $wpdb->get_var("
-			SELECT	ac.area_title
-			FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
-			WHERE	pc.postcode														LIKE '" . strtoupper( $_POST[$this->plugin_slug . '-raw-postcode'] ) . "%'
-			AND		pc." . $_POST[$this->plugin_slug . '-raw-area-type'] . "_code	= ac.code
-			AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
-		");
-
-		echo '<p><b>' . __( 'Area', $this->plugin_slug ) . ':</b> ' . $area ? $area : '<em>' . __( 'No match', $this->plugin_slug ) . '</em>' . '</p>';
+		echo '<p><b>' . __( 'Area', $this->plugin_slug ) . ' (' . $this->code_type_names[ strtolower( $area_details->code_type ) ] . '):</b> ' . $area_details->area_title . '</p>';
 
 		?>
 

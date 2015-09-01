@@ -95,6 +95,25 @@ class Pilau_UK_Mapping {
 	);
 
 	/**
+	 * Code type names
+	 *
+	 * @since    0.1
+	 * @var      array
+	 */
+	protected $code_type_names = array(
+		'cty'	=> 'County',
+		'dis'	=> 'District',
+		'diw'	=> 'District Ward',
+		'lbo'	=> 'London Borough',
+		'lbw'	=> 'London Borough Ward',
+		'mtd'	=> 'Metropolitan District',
+		'mtw'	=> 'Metropolitan District Ward',
+		'uta'	=> 'Unitary Authority',
+		'ute'	=> 'Unitary Authority Electoral Division',
+		'utw'	=> 'Unitary Authority Ward'
+	);
+
+	/**
 	 * Initialize the plugin by setting localization, filters, and administration functions.
 	 *
 	 * @since     0.1
@@ -282,7 +301,7 @@ class Pilau_UK_Mapping {
 		if ( $this->raw_data_present ) {
 			add_submenu_page(
 				$this->plugin_slug,
-				__( 'Raw data queries', $this->plugin_slug ),
+				__( 'Raw data', $this->plugin_slug ),
 				__( 'Raw data', $this->plugin_slug ),
 				'update_core',
 				$this->plugin_slug . '_raw_data',
