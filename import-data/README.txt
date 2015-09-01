@@ -1,0 +1,1 @@
+This folder is for locally importing raw data. Nothing should be committed here.

@@ -1,3 +1,7 @@
+# Import data
+import-data/*
+!import-data/README.txt
+
 # Any system or IDE files
 Thumbs.db
 .DS_Store
