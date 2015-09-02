@@ -153,6 +153,7 @@ class Pilau_UK_Mapping {
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menus' ) );
 		add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
 		//add_action( 'admin_init', array( $this, 'process_kml_import' ) );
+		add_action( 'admin_init', array( $this, 'populate_data' ) );
 
 		// Load admin style sheet and JavaScript.
 		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_styles' ) );
@@ -431,6 +432,32 @@ class Pilau_UK_Mapping {
 
 			// Redirect
 			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '_raw_data' . '&kml=1' ) );
+
+		}
+
+	}
+
+	/**
+	 * Populate data
+	 *
+	 * @since    0.1
+	 */
+	public function populate_data() {
+		global $wpdb;
+
+		// Submitted?
+		if ( isset( $_POST[ $this->plugin_slug . '_populate_data_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_populate_data', $this->plugin_slug . '_populate_data_nonce' ) ) {
+
+			$post_type = $_POST[ $this->plugin_slug . '_populate_post_type' ];
+
+			// Get raw data
+			$post_type_data = $wpdb->get_results("
+				SELECT	*
+				FROM	pukm_postcodes_raw pc
+			");
+
+			// Redirect
+			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '_raw_data' . '&populate=1' ) );
 
 		}
 

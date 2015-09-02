@@ -30,6 +30,10 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 		<p><em><?php _e( 'KML imported successfully.' ); ?></em></p>
 
+	<?php } else if ( $_GET['populate'] ) { ?>
+
+		<p><em><?php _e( 'Data populated successfully.' ); ?></em></p>
+
 	<?php } ?>
 
 	<form method="post" action="">
@@ -64,6 +68,37 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Do query', $this->plugin_slug ); ?>"></p>
 
 	</form>
+
+	<?php if ( $this->options['postcode_post_type'] != 'none' ) { ?>
+
+		<h3><?php _e( 'Populate data' ); ?></h3>
+
+		<?php $cpt_args = $this->custom_post_type_args(); ?>
+
+		<form method="post" action="">
+
+			<?php wp_nonce_field( $this->plugin_slug . '_populate_data', $this->plugin_slug . '_populate_data_nonce' ); ?>
+
+			<table class="form-table">
+				<tbody>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '_populate_post_type'; ?>"><?php _e( 'Populate post type' ); ?></label>
+						</th>
+						<td>
+							<select name="<?php echo $this->plugin_slug . '_populate_post_type'; ?>" id="<?php echo $this->plugin_slug . '_populate_post_type'; ?>" class="regular-text">
+								<option value="<?php echo $this->options['postcode_post_type']; ?>"><?php echo $cpt_args[ $this->options['postcode_post_type'] ]['labels']['name']; ?></option>
+							</select>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Populate', $this->plugin_slug ); ?>"></p>
+
+		</form>
+
+	<?php } ?>
 
 	<?php /*
 
