@@ -94,8 +94,9 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 	</form>
 
+	<?php /*
 
-	<h2><?php _e( 'KML import', $this->plugin_sliug ); ?></h2>
+ 	<h2><?php _e( 'KML import', $this->plugin_sliug ); ?></h2>
 
 	<?php if ( $this->import_kml ) { ?>
 
@@ -132,5 +133,6 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 	?>
 
+ 	*/ ?>
 
 </div>

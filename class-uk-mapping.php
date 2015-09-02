@@ -134,9 +134,10 @@ class Pilau_UK_Mapping {
 		// Admin init
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 
-		// Add the admin page and menu item.
+		// Add the admin pages and menu items
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menus' ) );
 		//add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
+		//add_action( 'admin_init', array( $this, 'process_kml_import' ) );
 
 		// Load admin style sheet and JavaScript.
 		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_styles' ) );
