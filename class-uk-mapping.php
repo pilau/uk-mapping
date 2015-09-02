@@ -85,13 +85,16 @@ class Pilau_UK_Mapping {
 	/**
 	 * Code type equivalents
 	 *
+	 * These describe which code types might be found in the 3 area code columns
+	 * in the raw postcodes dataset
+	 *
 	 * @since    0.1
 	 * @var      array
 	 */
 	protected $code_type_equivalents = array(
-		'cty'	=> array( 'cty' ),
-		'dis'	=> array( 'dis', 'lbo', 'mtd', 'uta' ),
-		'diw'	=> array( 'diw', 'lbw', 'mtw', 'utw' ),
+		'CTY'	=> array( 'CTY' ),
+		'DIS'	=> array( 'DIS', 'LBO', 'MTD', 'UTA' ),
+		'DIW'	=> array( 'DIW', 'LBW', 'MTW', 'UTW' ),
 	);
 
 	/**
@@ -101,16 +104,16 @@ class Pilau_UK_Mapping {
 	 * @var      array
 	 */
 	protected $code_type_names = array(
-		'cty'	=> 'County',
-		'dis'	=> 'District',
-		'diw'	=> 'District Ward',
-		'lbo'	=> 'London Borough',
-		'lbw'	=> 'London Borough Ward',
-		'mtd'	=> 'Metropolitan District',
-		'mtw'	=> 'Metropolitan District Ward',
-		'uta'	=> 'Unitary Authority',
-		'ute'	=> 'Unitary Authority Electoral Division',
-		'utw'	=> 'Unitary Authority Ward'
+		'CTY'	=> 'County',
+		'DIS'	=> 'District',
+		'DIW'	=> 'District Ward',
+		'LBO'	=> 'London Borough',
+		'LBW'	=> 'London Borough Ward',
+		'MTD'	=> 'Metropolitan District',
+		'MTW'	=> 'Metropolitan District Ward',
+		'UTA'	=> 'Unitary Authority',
+		'UTE'	=> 'Unitary Authority Electoral Division',
+		'UTW'	=> 'Unitary Authority Ward'
 	);
 
 	/**
@@ -394,6 +397,70 @@ class Pilau_UK_Mapping {
 	public function register_custom_taxonomies() {
 
 
+	}
+
+	/*
+	 * All functions for dealing with raw data are private and prefixed
+	 **************************************************************************************/
+
+	/**
+	 * From raw data, get local authority for postcode
+	 *
+	 * @since	0.1
+	 * @param	string		$postcode
+	 * @param	string		$la_type
+	 * @param	bool		$strip_title	Strip off "County", "District", etc.?
+	 * @return	array
+	 */
+	private function raw_postcode_to_local_authority( $postcode, $la_type = 'CTY', $strip_title = true ) {
+		global $wpdb;
+		$postcode = preg_replace( '/[^A-Z0-9]+/', '', strtoupper( $postcode ) );
+		$la_type = preg_replace( '/[^A-Z]+/', '', strtoupper( $la_type ) );
+		$la_details = array();
+
+		// If trying to get county, try to get "district" if there's no county (i.e. top-level authority is unitary or metropolitan)
+		$attempt_authority_levels = array( $la_type );
+		if ( $la_type == 'CTY' ) {
+			$attempt_authority_levels[] = 'DIS';
+		}
+		foreach ( $attempt_authority_levels as $attempt_authority_level ) {
+
+			// Build area code equivalents
+			$area_code_equivalents = array();
+			foreach ( $this->code_type_equivalents[ $attempt_authority_level ] as $code_type ) {
+				$area_code_equivalents[] = ' ac.code_type = \'' . $code_type . '\'';
+			}
+
+			// Build query
+			$sql = "
+				SELECT	ac.code_type, ac.area_title
+				FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
+				WHERE	pc.postcode LIKE '" . $postcode . "%'
+				AND		pc." . strtolower( $attempt_authority_level ) . "_code	= ac.code
+				AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
+			";
+
+			// Do query
+			$la_details = $wpdb->get_row( $sql );
+
+			// Break if we've got results
+			if ( $la_details ) {
+				break;
+			}
+
+		}
+
+		// Strip title?
+		if ( $la_details->area_title && $strip_title ) {
+			foreach ( array( 'The City of', 'County', 'District', 'Ward', 'London Boro' ) as $area_label ) {
+				$la_details->area_title = preg_replace( '/\b' . $area_label . '\b/', '', $la_details->area_title );
+			}
+			$la_details->area_title = preg_replace( '/\(.+\)/', '', $la_details->area_title );
+			$la_details->area_title = trim( $la_details->area_title );
+		}
+
+		//echo '<pre>'; print_r( $sql ); echo '</pre>';
+		return $la_details;
 	}
 
 }

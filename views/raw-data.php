@@ -20,38 +20,9 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 		<?php
 
-		// If trying to get county, try to get "district" if there's no county (i.e. top-level authority is unitary or metropolitan)
-		$attempt_authority_levels = array( $_POST[$this->plugin_slug . '-raw-area-type'] );
-		if ( $_POST[$this->plugin_slug . '-raw-area-type'] == 'cty' ) {
-			$attempt_authority_levels[] = 'dis';
-		}
-		foreach ( $attempt_authority_levels as $attempt_authority_level ) {
+		$authority_details = $this->raw_postcode_to_local_authority( $_REQUEST[$this->plugin_slug . '-raw-postcode'], $_REQUEST[$this->plugin_slug . '-raw-area-type'] );
 
-			// Build area code equivalents
-			$area_code_equivalents = array();
-			foreach ( $this->code_type_equivalents[ $attempt_authority_level ] as $code_type ) {
-				$area_code_equivalents[] = ' ac.code_type = \'' . strtoupper( $code_type ) . '\'';
-			}
-
-			// Do query
-			$sql = "
-				SELECT	ac.code_type, ac.area_title
-				FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
-				WHERE	pc.postcode LIKE '" . strtoupper( $_POST[$this->plugin_slug . '-raw-postcode'] ) . "%'
-				AND		pc." . $attempt_authority_level . "_code	= ac.code
-				AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
-			";
-			//echo '<pre>'; print_r( $sql ); echo '</pre>'; exit;
-			$area_details = $wpdb->get_row( $sql );
-
-			// Break if we've got a result
-			if ( $area_details ) {
-				break;
-			}
-
-		}
-
-		echo '<p><b>' . __( 'Area', $this->plugin_slug ) . ' (' . $this->code_type_names[ strtolower( $area_details->code_type ) ] . '):</b> ' . $area_details->area_title . '</p>';
+		echo '<p><b>' . __( 'Area', $this->plugin_slug ) . ' (' . $this->code_type_names[ $authority_details->code_type ] . '):</b> ' . $authority_details->area_title . '</p>';
 
 		?>
 
