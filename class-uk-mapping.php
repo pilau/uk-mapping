@@ -83,6 +83,14 @@ class Pilau_UK_Mapping {
 	protected $raw_data_present = false;
 
 	/**
+	 * Plugin options
+	 *
+	 * @since    0.1
+	 * @var      array
+	 */
+	protected $options = array();
+
+	/**
 	 * Code type equivalents
 	 *
 	 * These describe which code types might be found in the 3 area code columns
@@ -131,6 +139,10 @@ class Pilau_UK_Mapping {
 	 */
 	private function __construct() {
 
+		// Load the options
+		// This is REQUIRED to initialize the options when the plugin is loaded!
+		$this->load_options();
+
 		// Global init
 		add_action( 'init', array( $this, 'init' ) );
 
@@ -139,7 +151,7 @@ class Pilau_UK_Mapping {
 
 		// Add the admin pages and menu items
 		add_action( 'admin_menu', array( $this, 'add_plugin_admin_menus' ) );
-		//add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
+		add_action( 'admin_init', array( $this, 'process_plugin_admin_page' ) );
 		//add_action( 'admin_init', array( $this, 'process_kml_import' ) );
 
 		// Load admin style sheet and JavaScript.
@@ -147,7 +159,7 @@ class Pilau_UK_Mapping {
 		//add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 
 		// Other hooks
-		//add_action( 'init', array( $this, 'register_custom_post_types' ), 0 );
+		add_action( 'init', array( $this, 'register_custom_post_types' ), 0 );
 		//add_action( 'init', array( $this, 'register_custom_taxonomies' ), 0 );
 
 	}
@@ -237,6 +249,45 @@ class Pilau_UK_Mapping {
 
 		}
 
+	}
+
+	/**
+	 * Loads the plugin options from the database
+	 *
+	 * @since	0.1
+	 * @uses	update_option()
+	 * @return	array
+	 */
+	private function load_options() {
+
+		// Are the options present?
+		if ( ! $options = get_option( $this->plugin_slug . '_options' ) ) {
+
+			// Set defaults
+			$options = array(
+				'postcode_post_type'	=> 'none'
+			);
+
+			// Save to database
+			$this->update_options( $options );
+
+		}
+
+		// Set options
+		$this->options = $options;
+
+	}
+
+	/**
+	 * Update options
+	 *
+	 * @since	0.1
+	 * @uses	update_option()
+	 * @param	array		$options
+	 * @return	bool
+	 */
+	private function update_options( $options ) {
+		return update_option( $this->plugin_slug . '_options', $options );
 	}
 
 	/**
@@ -352,6 +403,12 @@ class Pilau_UK_Mapping {
 		// Submitted?
 		if ( isset( $_POST[ $this->plugin_slug . '_admin_page_admin_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_admin_page', $this->plugin_slug . '_admin_page_admin_nonce' ) ) {
 
+			// Gather options
+			$options = array();
+			$options['postcode_post_type']			= in_array( $_POST[ $this->plugin_slug . '_postcode_post_type' ], array_keys( $this->custom_post_type_args() ) ) && strpos( $_POST[ $this->plugin_slug . '_postcode_post_type' ], 'postcode' ) ? $_POST[ $this->plugin_slug . '_postcode_post_type' ] : 'none';
+
+			// Update options
+			$this->update_options( $options );
 
 			// Redirect
 			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '&done=1' ) );
@@ -380,12 +437,104 @@ class Pilau_UK_Mapping {
 	}
 
 	/**
+	 * Return custom post type arguments (filtered)
+	 *
+	 * @since	0.1
+	 */
+	public function custom_post_type_args() {
+
+		return array(
+
+			// Postcode areas
+			'pukm_postcode_area'	=> apply_filters( 'pukm_post_type_args_postcode_area', array(
+				'label'					=> _x( 'postcode areas', 'post type plural name' ),
+				'labels'				=> array(
+					'name'					=> _x( 'Postcode areas', 'post type general name' ),
+					'singular_name'			=> _x( 'Postcode area', 'post type singular name' ),
+					'menu_name'				=> _x( 'Postcode areas', 'admin menu' ),
+					'name_admin_bar'		=> _x( 'Postcode area', 'add new on admin bar' ),
+					'add_new'				=> _x( 'Add New', 'postcode area' ),
+					'add_new_item'			=> __( 'Add New Postcode area' ),
+					'new_item'				=> __( 'New Postcode area' ),
+					'edit_item'				=> __( 'Edit Postcode area' ),
+					'view_item'				=> __( 'View Postcode area' ),
+					'all_items'				=> __( 'All Postcode areas' ),
+					'search_items'			=> __( 'Search Postcode areas' ),
+					'parent_item_colon'		=> __( 'Parent Postcode areas:' ),
+					'not_found'				=> __( 'No Postcode areas found.' ),
+					'not_found_in_trash'	=> __( 'No Postcode areas found in Trash.' )
+				),
+				'public'				=> false,
+				'publicly_queryable'	=> true,
+				'show_ui'				=> true,
+				'show_in_nav_menus'		=> false,
+				'show_in_menu'			=> true,
+				'show_in_admin_bar'		=> false,
+				'menu_position'			=> 90,
+				'menu_icon'				=> 'dashicons-location-alt', // @link https://developer.wordpress.org/resource/dashicons/
+				'query_var'				=> true,
+				'rewrite'				=> false,
+				'capability_type'		=> 'page',
+				'map_meta_cap'			=> false,
+				'has_archive'			=> false,
+				'hierarchical'			=> false,
+				'supports'				=> array( 'title', 'custom-fields' ),
+				'taxonomies'			=> array(),
+			)),
+
+			// Postcode districts
+			'pukm_postcode_dis'	=> apply_filters( 'pukm_post_type_args_postcode_dis', array(
+				'label'					=> _x( 'postcode districts', 'post type plural name' ),
+				'labels'				=> array(
+					'name'					=> _x( 'Postcode districts', 'post type general name' ),
+					'singular_name'			=> _x( 'Postcode district', 'post type singular name' ),
+					'menu_name'				=> _x( 'Postcode districts', 'admin menu' ),
+					'name_admin_bar'		=> _x( 'Postcode district', 'add new on admin bar' ),
+					'add_new'				=> _x( 'Add New', 'postcode district' ),
+					'add_new_item'			=> __( 'Add New Postcode district' ),
+					'new_item'				=> __( 'New Postcode district' ),
+					'edit_item'				=> __( 'Edit Postcode district' ),
+					'view_item'				=> __( 'View Postcode district' ),
+					'all_items'				=> __( 'All Postcode districts' ),
+					'search_items'			=> __( 'Search Postcode districts' ),
+					'parent_item_colon'		=> __( 'Parent Postcode districts:' ),
+					'not_found'				=> __( 'No Postcode districts found.' ),
+					'not_found_in_trash'	=> __( 'No Postcode districts found in Trash.' )
+				),
+				'public'				=> false,
+				'publicly_queryable'	=> true,
+				'show_ui'				=> true,
+				'show_in_nav_menus'		=> false,
+				'show_in_menu'			=> true,
+				'show_in_admin_bar'		=> false,
+				'menu_position'			=> 90,
+				'menu_icon'				=> 'dashicons-location-alt', // @link https://developer.wordpress.org/resource/dashicons/
+				'query_var'				=> true,
+				'rewrite'				=> false,
+				'capability_type'		=> 'page',
+				'map_meta_cap'			=> false,
+				'has_archive'			=> false,
+				'hierarchical'			=> false,
+				'supports'				=> array( 'title', 'custom-fields' ),
+				'taxonomies'			=> array(),
+			)),
+
+		);
+
+	}
+
+	/**
 	 * Register custom post types
 	 *
 	 * @since	0.1
 	 */
 	public function register_custom_post_types() {
 
+		// Only register the post types set to be registered
+		$post_type_args = $this->custom_post_type_args();
+		if ( $this->options[ 'postcode_post_type' ] != 'none' ) {
+			register_post_type( $this->options[ 'postcode_post_type' ], $post_type_args[ $this->options[ 'postcode_post_type' ] ] );
+		}
 
 	}
 
@@ -414,52 +563,56 @@ class Pilau_UK_Mapping {
 	 */
 	private function raw_postcode_to_local_authority( $postcode, $la_type = 'CTY', $strip_title = true ) {
 		global $wpdb;
-		$postcode = preg_replace( '/[^A-Z0-9]+/', '', strtoupper( $postcode ) );
-		$la_type = preg_replace( '/[^A-Z]+/', '', strtoupper( $la_type ) );
 		$la_details = array();
 
-		// If trying to get county, try to get "district" if there's no county (i.e. top-level authority is unitary or metropolitan)
-		$attempt_authority_levels = array( $la_type );
-		if ( $la_type == 'CTY' ) {
-			$attempt_authority_levels[] = 'DIS';
-		}
-		foreach ( $attempt_authority_levels as $attempt_authority_level ) {
+		// Only bother if raw data present
+		if ( $this->raw_data_present ) {
+			$postcode = preg_replace( '/[^A-Z0-9]+/', '', strtoupper( $postcode ) );
+			$la_type = preg_replace( '/[^A-Z]+/', '', strtoupper( $la_type ) );
 
-			// Build area code equivalents
-			$area_code_equivalents = array();
-			foreach ( $this->code_type_equivalents[ $attempt_authority_level ] as $code_type ) {
-				$area_code_equivalents[] = ' ac.code_type = \'' . $code_type . '\'';
+			// If trying to get county, try to get "district" if there's no county (i.e. top-level authority is unitary or metropolitan)
+			$attempt_authority_levels = array( $la_type );
+			if ( $la_type == 'CTY' ) {
+				$attempt_authority_levels[] = 'DIS';
+			}
+			foreach ( $attempt_authority_levels as $attempt_authority_level ) {
+
+				// Build area code equivalents
+				$area_code_equivalents = array();
+				foreach ( $this->code_type_equivalents[ $attempt_authority_level ] as $code_type ) {
+					$area_code_equivalents[] = ' ac.code_type = \'' . $code_type . '\'';
+				}
+
+				// Build query
+				$sql = "
+					SELECT	ac.code_type, ac.area_title
+					FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
+					WHERE	pc.postcode LIKE '" . $postcode . "%'
+					AND		pc." . strtolower( $attempt_authority_level ) . "_code	= ac.code
+					AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
+				";
+
+				// Do query
+				$la_details = $wpdb->get_row( $sql );
+
+				// Break if we've got results
+				if ( $la_details ) {
+					break;
+				}
+
 			}
 
-			// Build query
-			$sql = "
-				SELECT	ac.code_type, ac.area_title
-				FROM	$this->table_area_codes_raw ac, $this->table_postcodes_raw pc
-				WHERE	pc.postcode LIKE '" . $postcode . "%'
-				AND		pc." . strtolower( $attempt_authority_level ) . "_code	= ac.code
-				AND		( " . implode( ' OR ', $area_code_equivalents ) . " )
-			";
-
-			// Do query
-			$la_details = $wpdb->get_row( $sql );
-
-			// Break if we've got results
-			if ( $la_details ) {
-				break;
+			// Strip title?
+			if ( $la_details->area_title && $strip_title ) {
+				foreach ( array( 'The City of', 'County', 'District', 'Ward', 'London Boro' ) as $area_label ) {
+					$la_details->area_title = preg_replace( '/\b' . $area_label . '\b/', '', $la_details->area_title );
+				}
+				$la_details->area_title = preg_replace( '/\(.+\)/', '', $la_details->area_title );
+				$la_details->area_title = trim( $la_details->area_title );
 			}
 
 		}
 
-		// Strip title?
-		if ( $la_details->area_title && $strip_title ) {
-			foreach ( array( 'The City of', 'County', 'District', 'Ward', 'London Boro' ) as $area_label ) {
-				$la_details->area_title = preg_replace( '/\b' . $area_label . '\b/', '', $la_details->area_title );
-			}
-			$la_details->area_title = preg_replace( '/\(.+\)/', '', $la_details->area_title );
-			$la_details->area_title = trim( $la_details->area_title );
-		}
-
-		//echo '<pre>'; print_r( $sql ); echo '</pre>';
 		return $la_details;
 	}
 
