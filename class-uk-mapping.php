@@ -125,6 +125,15 @@ class Pilau_UK_Mapping {
 	);
 
 	/**
+	 * Postcode levels
+	 *
+	 * @link	https://en.wikipedia.org/wiki/Postcodes_in_the_United_Kingdom#Formatting
+	 * @since    0.1
+	 * @var      array
+	 */
+	protected $postcode_levels = array( 'area', 'district', 'sector', 'unit' );
+
+	/**
 	 * KML files to import
 	 *
 	 * @since    0.1
@@ -471,7 +480,7 @@ class Pilau_UK_Mapping {
 	public function custom_post_type_args() {
 		$post_type_args = array();
 
-		foreach ( array( 'area', 'district', 'sector', 'unit' ) as $postcode_level ) {
+		foreach ( $this->postcode_levels as $postcode_level ) {
 
 			$post_type_args['pukm_postcode_' . $postcode_level] = apply_filters( 'pukm_post_type_args_postcode_' . $postcode_level, array(
 				'label'					=> 'postcode ' . $postcode_level . 's',
@@ -553,6 +562,57 @@ class Pilau_UK_Mapping {
 	/*
 	 * All functions for dealing with raw data are private and prefixed
 	 **************************************************************************************/
+
+	/**
+	 * Check for postcodes straddling more than one local authority
+	 *
+	 * @since    0.1
+	 * @param	string	$postcode_level
+	 * @param	string	$la_type
+	 * @return	array
+	 */
+	private function raw_check_postcode_straddle( $postcode_level = 'unit', $la_type = 'CTY' ) {
+		global $wpdb;
+		$results = array();
+
+		// Only bother if raw data present
+		if ( $this->raw_data_present ) {
+			$la_type = preg_replace( '/[^A-Z]+/', '', strtoupper( $la_type ) );
+			$la_type_col = strtolower( $la_type ) . '_code';
+			$postcode_level_col = 'postcode';
+			if ( $postcode_level != 'unit' ) {
+				$postcode_level_col .= '_' . $postcode_level;
+			}
+
+			// Get all postcodes of the level we're dealing with
+			$postcodes = $wpdb->get_col("
+				SELECT		DISTINCT( $postcode_level_col )
+				FROM		pukm_postcodes_raw
+				ORDER BY	$postcode_level_col
+			");
+
+			// Go through them all and check if there's multiple local authorities of the specified type
+			foreach ( $postcodes as $postcode ) {
+
+				// Get unique local authorities for the postcode
+				$las = $wpdb->get_col("
+					SELECT		DISTINCT( $la_type_col )
+					FROM		pukm_postcodes_raw
+					WHERE		$postcode_level_col = '$postcode'
+					ORDER BY	$la_type_col
+				");
+
+				// More than one?
+				if ( count( $las ) > 1 ) {
+					$results[ $postcode ] = $las;
+				}
+
+			}
+
+		}
+
+		return $results;
+	}
 
 	/**
 	 * From raw data, get local authority for postcode

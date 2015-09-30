@@ -8,7 +8,8 @@
  * @license   GPL-2.0+
  */
 global $wpdb;
-$query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_raw_data', $this->plugin_slug . '_raw_data_nonce' );
+$match_postcode_to_la_query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_raw_data', $this->plugin_slug . '_raw_data_nonce' );
+$check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '_check_postcode_straddle_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_check_postcode_straddle', $this->plugin_slug . '_check_postcode_straddle_nonce' );
 
 ?>
 
@@ -16,13 +17,23 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 	<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-	<?php if ( $query_submitted ) { ?>
+	<?php if ( $match_postcode_to_la_query_submitted ) { ?>
 
 		<?php
 
 		$authority_details = $this->raw_postcode_to_local_authority( $_REQUEST[$this->plugin_slug . '-raw-postcode'], $_REQUEST[$this->plugin_slug . '-raw-area-type'] );
 
 		echo '<p><b>' . __( 'Area', $this->plugin_slug ) . ' (' . $this->code_type_names[ $authority_details->code_type ] . '):</b> ' . $authority_details->area_title . '</p>';
+
+		?>
+
+	<?php } else if ( $check_postcode_straddle_query_submitted ) { ?>
+
+		<?php
+
+		$check_straddle_results = $this->raw_check_postcode_straddle( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-level' ], $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-la-type' ] );
+
+		echo '<pre>'; print_r( $check_straddle_results ); echo '</pre>'; exit;
 
 		?>
 
@@ -36,6 +47,7 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 
 	<?php } ?>
 
+
 	<form method="post" action="">
 
 		<?php wp_nonce_field( $this->plugin_slug . '_raw_data', $this->plugin_slug . '_raw_data_nonce' ); ?>
@@ -47,7 +59,7 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 						<label for="<?php echo $this->plugin_slug . '-raw-postcode'; ?>"><?php _e( 'Postcode' ); ?></label>
 					</th>
 					<td>
-						<input type="text" name="<?php echo $this->plugin_slug . '-raw-postcode'; ?>" id="<?php echo $this->plugin_slug . '-raw-postcode'; ?>" class="regular-text"<?php if ( $query_submitted ) { ?> value="<?php echo $_POST[$this->plugin_slug . '-raw-postcode']; ?>"<?php } ?>>
+						<input type="text" name="<?php echo $this->plugin_slug . '-raw-postcode'; ?>" id="<?php echo $this->plugin_slug . '-raw-postcode'; ?>" class="regular-text"<?php if ( $match_postcode_to_la_query_submitted ) { ?> value="<?php echo $_POST[$this->plugin_slug . '-raw-postcode']; ?>"<?php } ?>>
 					</td>
 				</tr>
 				<tr valign="top">
@@ -56,9 +68,9 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 					</th>
 					<td>
 						<select name="<?php echo $this->plugin_slug . '-raw-area-type'; ?>" id="<?php echo $this->plugin_slug . '-raw-area-type'; ?>" class="regular-text">
-							<option value="cty"<?php if ( $query_submitted ) selected( $_POST[$this->plugin_slug . '-raw-area-type'], 'cty' ); ?>><?php _e( 'County', $this->plugin_slug ); ?></option>
-							<option value="dis"<?php if ( $query_submitted ) selected( $_POST[$this->plugin_slug . '-raw-area-type'], 'dis' ); ?>><?php _e( 'District', $this->plugin_slug ); ?></option>
-							<option value="diw"<?php if ( $query_submitted ) selected( $_POST[$this->plugin_slug . '-raw-area-type'], 'diw' ); ?>><?php _e( 'Ward', $this->plugin_slug ); ?></option>
+							<?php foreach ( $this->code_type_equivalents as $la_type => $la_type_equivalents ) { ?>
+								<option value="<?php echo strtolower( $la_type ); ?>"<?php if ( $match_postcode_to_la_query_submitted ) selected( $_POST[$this->plugin_slug . '-raw-area-type'], strtolower( $la_type ) ); ?>><?php echo $la_type; ?></option>
+							<?php } ?>
 						</select>
 					</td>
 				</tr>
@@ -68,6 +80,47 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Do query', $this->plugin_slug ); ?>"></p>
 
 	</form>
+
+
+	<h3><?php _e( 'Check for postcodes straddling more than one local authority' ); ?></h3>
+
+	<form method="post" action="">
+
+		<?php wp_nonce_field( $this->plugin_slug . '_check_postcode_straddle', $this->plugin_slug . '_check_postcode_straddle_nonce' ); ?>
+
+		<table class="form-table">
+			<tbody>
+				<tr valign="top">
+					<th scope="row">
+						<label for="<?php echo $this->plugin_slug . '-check-postcode-straddle-level'; ?>"><?php _e( 'Postcode level' ); ?></label>
+					</th>
+					<td>
+						<select name="<?php echo $this->plugin_slug . '-check-postcode-straddle-level'; ?>" id="<?php echo $this->plugin_slug . '-check-postcode-straddle-level'; ?>" class="regular-text">
+							<?php foreach ( array_reverse( $this->postcode_levels ) as $postcode_level ) { ?>
+								<option value="<?php echo $postcode_level; ?>"><?php echo ucfirst( $postcode_level ); ?></option>
+							<?php } ?>
+						</select>
+					</td>
+				</tr>
+				<tr valign="top">
+					<th scope="row">
+						<label for="<?php echo $this->plugin_slug . '-check-postcode-straddle-la-type'; ?>"><?php _e( 'Local authority type' ); ?></label>
+					</th>
+					<td>
+						<select name="<?php echo $this->plugin_slug . '-check-postcode-straddle-la-type'; ?>" id="<?php echo $this->plugin_slug . '-check-postcode-straddle-la-type'; ?>" class="regular-text">
+							<?php foreach ( $this->code_type_equivalents as $la_type => $la_type_equivalents ) { ?>
+								<option value="<?php echo strtolower( $la_type ); ?>"<?php if ( $match_postcode_to_la_query_submitted ) selected( $_POST[$this->plugin_slug . '-check-postcode-straddle-la-type'], strtolower( $la_type ) ); ?>><?php echo $la_type; ?></option>
+							<?php } ?>
+						</select>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Check', $this->plugin_slug ); ?>"></p>
+
+	</form>
+
 
 	<?php if ( $this->options['postcode_post_type'] != 'none' ) { ?>
 
@@ -99,6 +152,7 @@ $query_submitted = isset( $_POST[ $this->plugin_slug . '_raw_data_nonce' ] ) && 
 		</form>
 
 	<?php } ?>
+
 
 	<?php /*
 
