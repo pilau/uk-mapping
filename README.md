@@ -12,5 +12,7 @@ Note that the plugin folder should be named `uk-mapping`. This is because if the
 ## Filter hooks
 * `pukm_post_type_args_postcode_area` - Filter array arguments for defining postcode area custom post type
 * `pukm_post_type_args_postcode_dis` - Filter array arguments for defining postcode district custom post type
+* `pukm_post_type_args_postcode_sect` - Filter array arguments for defining postcode sector custom post type
+* `pukm_post_type_args_postcode_unit` - Filter array arguments for defining postcode unit custom post type
 
 ## Action hooks

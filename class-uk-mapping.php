@@ -469,27 +469,27 @@ class Pilau_UK_Mapping {
 	 * @since	0.1
 	 */
 	public function custom_post_type_args() {
+		$post_type_args = array();
 
-		return array(
+		foreach ( array( 'area', 'district', 'sector', 'unit' ) as $postcode_level ) {
 
-			// Postcode areas
-			'pukm_postcode_area'	=> apply_filters( 'pukm_post_type_args_postcode_area', array(
-				'label'					=> _x( 'postcode areas', 'post type plural name' ),
+			$post_type_args['pukm_postcode_' . $postcode_level] = apply_filters( 'pukm_post_type_args_postcode_' . $postcode_level, array(
+				'label'					=> 'postcode ' . $postcode_level . 's',
 				'labels'				=> array(
-					'name'					=> _x( 'Postcode areas', 'post type general name' ),
-					'singular_name'			=> _x( 'Postcode area', 'post type singular name' ),
-					'menu_name'				=> _x( 'Postcode areas', 'admin menu' ),
-					'name_admin_bar'		=> _x( 'Postcode area', 'add new on admin bar' ),
-					'add_new'				=> _x( 'Add New', 'postcode area' ),
-					'add_new_item'			=> __( 'Add New Postcode area' ),
-					'new_item'				=> __( 'New Postcode area' ),
-					'edit_item'				=> __( 'Edit Postcode area' ),
-					'view_item'				=> __( 'View Postcode area' ),
-					'all_items'				=> __( 'All Postcode areas' ),
-					'search_items'			=> __( 'Search Postcode areas' ),
-					'parent_item_colon'		=> __( 'Parent Postcode areas:' ),
-					'not_found'				=> __( 'No Postcode areas found.' ),
-					'not_found_in_trash'	=> __( 'No Postcode areas found in Trash.' )
+					'name'					=> 'Postcode ' . $postcode_level . 's',
+					'singular_name'			=> 'Postcode ' . $postcode_level . '',
+					'menu_name'				=> 'Postcode ' . $postcode_level . 's',
+					'name_admin_bar'		=> 'Postcode ' . $postcode_level . '',
+					'add_new'				=> 'Add New',
+					'add_new_item'			=> 'Add New Postcode ' . $postcode_level . '',
+					'new_item'				=> 'New Postcode ' . $postcode_level . '',
+					'edit_item'				=> 'Edit Postcode ' . $postcode_level . '',
+					'view_item'				=> 'View Postcode ' . $postcode_level . '',
+					'all_items'				=> 'All Postcode ' . $postcode_level . 's',
+					'search_items'			=> 'Search Postcode ' . $postcode_level . 's',
+					'parent_item_colon'		=> 'Parent Postcode ' . $postcode_level . 's:',
+					'not_found'				=> 'No Postcode ' . $postcode_level . 's found.',
+					'not_found_in_trash'	=> 'No Postcode ' . $postcode_level . 's found in Trash.'
 				),
 				'public'				=> false,
 				'publicly_queryable'	=> true,
@@ -501,53 +501,28 @@ class Pilau_UK_Mapping {
 				'menu_icon'				=> 'dashicons-location-alt', // @link https://developer.wordpress.org/resource/dashicons/
 				'query_var'				=> true,
 				'rewrite'				=> false,
-				'capability_type'		=> 'page',
+				'capability_type'		=> 'postcode',
 				'map_meta_cap'			=> false,
-				'has_archive'			=> false,
-				'hierarchical'			=> false,
-				'supports'				=> array( 'title', 'custom-fields' ),
-				'taxonomies'			=> array(),
-			)),
-
-			// Postcode districts
-			'pukm_postcode_dis'	=> apply_filters( 'pukm_post_type_args_postcode_dis', array(
-				'label'					=> _x( 'postcode districts', 'post type plural name' ),
-				'labels'				=> array(
-					'name'					=> _x( 'Postcode districts', 'post type general name' ),
-					'singular_name'			=> _x( 'Postcode district', 'post type singular name' ),
-					'menu_name'				=> _x( 'Postcode districts', 'admin menu' ),
-					'name_admin_bar'		=> _x( 'Postcode district', 'add new on admin bar' ),
-					'add_new'				=> _x( 'Add New', 'postcode district' ),
-					'add_new_item'			=> __( 'Add New Postcode district' ),
-					'new_item'				=> __( 'New Postcode district' ),
-					'edit_item'				=> __( 'Edit Postcode district' ),
-					'view_item'				=> __( 'View Postcode district' ),
-					'all_items'				=> __( 'All Postcode districts' ),
-					'search_items'			=> __( 'Search Postcode districts' ),
-					'parent_item_colon'		=> __( 'Parent Postcode districts:' ),
-					'not_found'				=> __( 'No Postcode districts found.' ),
-					'not_found_in_trash'	=> __( 'No Postcode districts found in Trash.' )
+				'capabilities' => array(
+					'publish_posts'			=> 'publish_postcodes',
+					'edit_posts'			=> 'edit_postcodes',
+					'edit_others_posts'		=> 'edit_others_postcodes',
+					'delete_posts'			=> 'delete_postcodes',
+					'delete_others_posts'	=> 'delete_others_postcodes',
+					'read_private_posts'	=> 'read_private_postcodes',
+					'edit_post'				=> 'edit_postcode',
+					'delete_post'			=> 'delete_postcode',
+					'read_post'				=> 'read_postcode',
 				),
-				'public'				=> false,
-				'publicly_queryable'	=> true,
-				'show_ui'				=> true,
-				'show_in_nav_menus'		=> false,
-				'show_in_menu'			=> true,
-				'show_in_admin_bar'		=> false,
-				'menu_position'			=> 90,
-				'menu_icon'				=> 'dashicons-location-alt', // @link https://developer.wordpress.org/resource/dashicons/
-				'query_var'				=> true,
-				'rewrite'				=> false,
-				'capability_type'		=> 'page',
-				'map_meta_cap'			=> false,
 				'has_archive'			=> false,
 				'hierarchical'			=> false,
 				'supports'				=> array( 'title', 'custom-fields' ),
 				'taxonomies'			=> array(),
-			)),
+			));
 
-		);
+		}
 
+		return $post_type_args;
 	}
 
 	/**
