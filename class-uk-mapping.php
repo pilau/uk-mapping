@@ -59,7 +59,7 @@ class Pilau_UK_Mapping {
 	protected $settings = null;
 
 	/**
-	 * The raw area codes table name (without prefix)
+	 * The raw area codes table name
 	 *
 	 * @since    0.1
 	 * @var      string
@@ -67,12 +67,20 @@ class Pilau_UK_Mapping {
 	protected $table_area_codes_raw = 'pukm_area_codes_raw';
 
 	/**
-	 * The raw postcodes table name (without prefix)
+	 * The raw postcodes table name
 	 *
 	 * @since    0.1
 	 * @var      string
 	 */
 	protected $table_postcodes_raw = 'pukm_postcodes_raw';
+
+	/**
+	 * The postcode sectors table name
+	 *
+	 * @since    0.1
+	 * @var      string
+	 */
+	protected $table_postcode_sectors = 'pukm_postcode_sectors';
 
 	/**
 	 * Is the raw data present?
@@ -584,29 +592,29 @@ class Pilau_UK_Mapping {
 				$postcode_level_col .= '_' . $postcode_level;
 			}
 
-			// Get all postcodes of the level we're dealing with
-			$postcodes = $wpdb->get_col("
-				SELECT		DISTINCT( $postcode_level_col )
-				FROM		pukm_postcodes_raw
-				ORDER BY	$postcode_level_col
+			// Count number of postcodes at selected level that have more than one value for specified local authority type
+			$results = $wpdb->get_col("
+				SELECT		$postcode_level_col
+				FROM		$this->table_postcodes_raw
+				WHERE		( $la_type_col IS NOT NULL AND $la_type_col <> '' )
+				GROUP BY	$postcode_level_col
+				HAVING		MIN( $la_type_col ) <> MAX( $la_type_col )
 			");
+			//echo '<pre>'; print_r( $results ); echo '</pre>';
 
-			// Go through them all and check if there's multiple local authorities of the specified type
-			foreach ( $postcodes as $postcode ) {
-
-				// Get unique local authorities for the postcode
-				$las = $wpdb->get_col("
-					SELECT		DISTINCT( $la_type_col )
-					FROM		pukm_postcodes_raw
-					WHERE		$postcode_level_col = '$postcode'
-					ORDER BY	$la_type_col
+			// If checking at county level, add in results at DIS level for those without a CTY (e.g. unitary authorities)
+			if ( $la_type == 'CTY' ) {
+				$results2 = $wpdb->get_col("
+					SELECT		$postcode_level_col
+					FROM		$this->table_postcodes_raw
+					WHERE		( $la_type_col IS NULL OR $la_type_col = '' )
+					GROUP BY	$postcode_level_col
+					HAVING		MIN( 'dis_code' ) <> MAX( 'dis_code' )
 				");
-
-				// More than one?
-				if ( count( $las ) > 1 ) {
-					$results[ $postcode ] = $las;
+				//echo '<pre>'; print_r( $results2 ); echo '</pre>'; exit;
+				if ( $results2 ) {
+					$results = array_merge( $results, $results2 );
 				}
-
 			}
 
 		}

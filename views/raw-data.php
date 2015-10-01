@@ -33,9 +33,15 @@ $check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '
 
 		$check_straddle_results = $this->raw_check_postcode_straddle( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-level' ], $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-la-type' ] );
 
-		echo '<pre>'; print_r( $check_straddle_results ); echo '</pre>'; exit;
-
 		?>
+
+		<p><em><?php _e( 'Postcode straddle checking results:' ); ?></em></p>
+
+		<ul>
+			<li><b><?php _e( 'Postcode level:' ); ?></b> <?php echo ucfirst( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-level' ] ); ?></li>
+			<li><b><?php _e( 'Local authority type:' ); ?></b> <?php echo $this->code_type_names[ strtoupper( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-la-type' ] ) ]; ?></li>
+			<li><b><?php _e( 'Number of postcodes at this level straddling more than one local authority of this type:' ); ?></b> <?php echo count( $check_straddle_results ); ?></li>
+		</ul>
 
 	<?php } else if ( $_GET['kml'] ) { ?>
 
@@ -51,6 +57,8 @@ $check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '
 	<form method="post" action="">
 
 		<?php wp_nonce_field( $this->plugin_slug . '_raw_data', $this->plugin_slug . '_raw_data_nonce' ); ?>
+
+		<h3><?php _e( 'Match postcode to local authority' ); ?></h3>
 
 		<table class="form-table">
 			<tbody>
