@@ -40,7 +40,8 @@ $check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '
 		<ul>
 			<li><b><?php _e( 'Postcode level:' ); ?></b> <?php echo ucfirst( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-level' ] ); ?></li>
 			<li><b><?php _e( 'Local authority type:' ); ?></b> <?php echo $this->code_type_names[ strtoupper( $_REQUEST[ $this->plugin_slug . '-check-postcode-straddle-la-type' ] ) ]; ?></li>
-			<li><b><?php _e( 'Number of postcodes at this level straddling more than one local authority of this type:' ); ?></b> <?php echo count( $check_straddle_results ); ?></li>
+			<li><b><?php _e( 'Number of postcodes at this level straddling more than one local authority of this type:' ); ?></b> <?php echo count( $check_straddle_results['straddling_postcodes'] ); ?></li>
+			<li><b><?php _e( 'This number as a percentage of the total unique postcodes at this level:' ); ?></b> <?php echo $check_straddle_results['percentage_of_total']; ?>%</li>
 		</ul>
 
 	<?php } else if ( $_GET['kml'] ) { ?>

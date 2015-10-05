@@ -581,7 +581,7 @@ class Pilau_UK_Mapping {
 	 */
 	private function raw_check_postcode_straddle( $postcode_level = 'unit', $la_type = 'CTY' ) {
 		global $wpdb;
-		$results = array();
+		$results = array( 'straddling_postcodes' => array(), 'percentage_of_total' => null );
 
 		// Only bother if raw data present
 		if ( $this->raw_data_present ) {
@@ -593,7 +593,7 @@ class Pilau_UK_Mapping {
 			}
 
 			// Count number of postcodes at selected level that have more than one value for specified local authority type
-			$results = $wpdb->get_col("
+			$results['straddling_postcodes'] = $wpdb->get_col("
 				SELECT		$postcode_level_col
 				FROM		$this->table_postcodes_raw
 				WHERE		( $la_type_col IS NOT NULL AND $la_type_col <> '' )
@@ -613,9 +613,16 @@ class Pilau_UK_Mapping {
 				");
 				//echo '<pre>'; print_r( $results2 ); echo '</pre>'; exit;
 				if ( $results2 ) {
-					$results = array_merge( $results, $results2 );
+					$results['straddling_postcodes'] = array_merge( $results['straddling_postcodes'], $results2 );
 				}
 			}
+
+			// Get total to calculate percentage
+			$postcodes_total = $wpdb->get_var("
+				SELECT	COUNT( DISTINCT $postcode_level_col )
+				FROM	$this->table_postcodes_raw
+			");
+			$results['percentage_of_total'] = round( ( count( $results['straddling_postcodes'] ) / $postcodes_total ) * 100, 1 );
 
 		}
 
