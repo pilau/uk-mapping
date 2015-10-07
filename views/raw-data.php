@@ -141,7 +141,62 @@ $check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '
 
 			<?php wp_nonce_field( $this->plugin_slug . '_populate_data', $this->plugin_slug . '_populate_data_nonce' ); ?>
 
-			<p><b><?php _e( 'Postcode type to populate' ) ?>:</b> <?php echo $cpt_args[ $this->options['postcode_post_type'] ]['labels']['name']; ?></p>
+			<table class="form-table">
+				<tbody>
+					<tr valign="top">
+						<th scope="row">
+							<b><?php _e( 'Postcode type to populate' ) ?></b>
+						</th>
+						<td>
+							<?php echo $cpt_args[ $this->options['postcode_post_type'] ]['labels']['name']; ?>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '-populate-la-type'; ?>"><?php _e( 'Type of local authority to store details for' ); ?></label>
+						</th>
+						<td>
+							<select name="<?php echo $this->plugin_slug . '-populate-la-type'; ?>" id="<?php echo $this->plugin_slug . '-populate-la-type'; ?>" class="regular-text">
+								<?php foreach ( $this->code_type_equivalents as $la_type => $la_type_equivalents ) { ?>
+									<option value="<?php echo strtolower( $la_type ); ?>"><?php echo $la_type; ?></option>
+								<?php } ?>
+							</select>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '-populate-custom-field-prefix'; ?>"><?php _e( 'Custom field prefix' ); ?></label>
+						</th>
+						<td>
+							<input type="text" name="<?php echo $this->plugin_slug . '-populate-custom-field-prefix'; ?>" id="<?php echo $this->plugin_slug . '-populate-custom-field-prefix'; ?>" class="regular-text" value="<?php if ( defined( 'PILAU_CUSTOM_FIELDS_PREFIX' ) ) echo PILAU_CUSTOM_FIELDS_PREFIX; ?>">
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code-type'; ?>"><?php _e( 'Custom field name for local authority code type (CTY, DIS, DIW)' ); ?></label>
+						</th>
+						<td>
+							<input type="text" name="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code-type'; ?>" id="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code-type'; ?>" class="regular-text" value="postcode-la-code-type">
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code'; ?>"><?php _e( 'Custom field name for local authority code' ); ?></label>
+						</th>
+						<td>
+							<input type="text" name="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code'; ?>" id="<?php echo $this->plugin_slug . '-populate-custom-field-name-postcode-la-code'; ?>" class="regular-text" value="postcode-la-code">
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">
+							<label for="<?php echo $this->plugin_slug . '-populate-custom-field-name-other-las'; ?>"><?php _e( 'Custom field name for storing other (straddled) authorities' ); ?></label>
+						</th>
+						<td>
+							<input type="text" name="<?php echo $this->plugin_slug . '-populate-custom-field-name-other-las'; ?>" id="<?php echo $this->plugin_slug . '-populate-custom-field-name-other-las'; ?>" class="regular-text" value="postcode-la-others">
+						</td>
+					</tr>
+				</tbody>
+			</table>
 
 			<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Populate', $this->plugin_slug ); ?>"></p>
 

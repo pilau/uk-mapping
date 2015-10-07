@@ -465,19 +465,161 @@ class Pilau_UK_Mapping {
 		// Submitted?
 		if ( isset( $_POST[ $this->plugin_slug . '_populate_data_nonce' ] ) && check_admin_referer( $this->plugin_slug . '_populate_data', $this->plugin_slug . '_populate_data_nonce' ) ) {
 
-			$post_type = $_POST[ $this->plugin_slug . '_populate_post_type' ];
+			// Init
+			$post_type = $this->options['postcode_post_type'];
+			$postcode_col = str_replace( 'pukm_', '', $post_type );
+			if ( $postcode_col == 'postcode_unit' ) {
+				$postcode_col = 'postcode';
+			}
+			$la_type = $_REQUEST[ $this->plugin_slug . '-populate-la-type' ];
+			$la_type_col = $la_type . '_code';
+			$prefix = $_REQUEST[ $this->plugin_slug . '-populate-custom-field-prefix' ];
+			$field_code_type = $prefix . $_REQUEST[ $this->plugin_slug . '-populate-custom-field-name-postcode-la-code-type' ];
+			$field_code = $prefix . $_REQUEST[ $this->plugin_slug . '-populate-custom-field-name-postcode-la-code' ];
+			$field_other_las = $prefix . $_REQUEST[ $this->plugin_slug . '-populate-custom-field-name-other-las' ];
+			/*
+			echo '<pre>'; print_r( $post_type ); echo '</pre>';
+			echo '<pre>'; print_r( $postcode_col ); echo '</pre>';
+			echo '<pre>'; print_r( $la_type ); echo '</pre>';
+			echo '<pre>'; print_r( $la_type_col ); echo '</pre>';
+			echo '<pre>'; print_r( $prefix ); echo '</pre>';
+			echo '<pre>'; print_r( $field_code_type ); echo '</pre>';
+			echo '<pre>'; print_r( $field_code ); echo '</pre>'; exit;
+			echo '<pre>'; print_r( $field_other_las ); echo '</pre>'; exit;
+			*/
 
 			// Get raw data
-			$post_type_data = $wpdb->get_results("
-				SELECT	*
-				FROM	pukm_postcodes_raw pc
+			$postcode_data = $wpdb->get_results("
+				SELECT		DISTINCT $postcode_col as postcode, $la_type_col as la_code
+				FROM		$this->table_postcodes_raw
+				WHERE		( $la_type_col IS NOT NULL AND $la_type_col <> '' )
+				ORDER BY	LENGTH( $postcode_col ), $postcode_col
 			");
+			/*
+			echo '<pre>';
+			foreach ( $postcode_data as $postcode_datum ) {
+				echo $postcode_datum->postcode . "\t\t" .$postcode_datum->la_code . "\n";
+			}
+			echo '</pre>'; exit;
+			*/
+
+			// Go through and create postcode posts
+			// Also log other (straddled) codes
+			$other_straddled_la_codes = array();
+			foreach ( $postcode_data as $postcode_datum ) {
+
+				if ( isset( $other_straddled_la_codes[ $postcode_datum->postcode ] ) ) {
+
+					// This postcode's already been done - log this extra LA code that it straddles
+					$other_straddled_la_codes[ $postcode_datum->postcode ][] = $postcode_datum->la_code;
+
+				} else {
+
+					// Create the postcode post
+					$postcode_post_id = $this->create_postcode_post(
+						$postcode_datum->postcode,
+						$field_code,
+						$postcode_datum->la_code,
+						$field_code_type,
+						$la_type
+					);
+
+					if ( ! is_wp_error( $postcode_post_id ) && $postcode_post_id ) {
+
+						// Create an empty array for potential straddled LA codes
+						$other_straddled_la_codes[ $postcode_datum->postcode ] = array();
+
+					}
+
+				}
+			}
+
+			// And again for DIS column if CTY was the aim
+			if ( $la_type == 'CTY' ) {
+
+				// Get raw data
+				$postcode_data = $wpdb->get_results("
+					SELECT		DISTINCT $postcode_col as postcode, dis_code as la_code
+					FROM		$this->table_postcodes_raw
+					WHERE		( cty_code IS NULL OR cty_code = '' )
+					ORDER BY	LENGTH( $postcode_col ), $postcode_col
+				");
+
+				// Go through and create postcode posts
+				// Also log other (straddled) codes
+				foreach ( $postcode_data as $postcode_datum ) {
+					if ( isset( $other_straddled_la_codes[ $postcode_datum->postcode ] ) ) {
+						$other_straddled_la_codes[ $postcode_datum->postcode ][] = $postcode_datum->la_code;
+					} else {
+						$postcode_post_id = $this->create_postcode_post(
+							$postcode_datum->postcode,
+							$field_code,
+							$postcode_datum->la_code,
+							$field_code_type,
+							'DIS'
+						);
+						if ( ! is_wp_error( $postcode_post_id ) && $postcode_post_id ) {
+							$other_straddled_la_codes[ $postcode_datum->postcode ] = array();
+						}
+					}
+				}
+
+			}
+
+			// Log straddled LA codes in custom fields
+			if ( $other_straddled_la_codes ) {
+				foreach ( $other_straddled_la_codes as $postcode => $straddled_la_codes ) {
+
+					// Get the ID of the postcode
+					$postcode_post = get_page_by_title(
+						$postcode,
+						OBJECT,
+						$this->options['postcode_post_type']
+					);
+
+					if ( $postcode_post ) {
+						update_post_meta( $postcode_post->ID, $field_other_las, $straddled_la_codes );
+					}
+
+				}
+			}
 
 			// Redirect
 			wp_redirect( admin_url( 'admin.php?page=' . $this->plugin_slug . '_raw_data' . '&populate=1' ) );
 
 		}
 
+	}
+
+	/**
+	 * Create a postcode post
+	 *
+	 * @since	0.1
+	 * @param	string	$postcode
+	 * @param	string	$la_code_field
+	 * @param	string	$la_code
+	 * @param	string	$la_code_type_field
+	 * @param	string	$la_code_type
+	 * @return	mixed
+	 */
+	public function create_postcode_post( $postcode, $la_code_field, $la_code, $la_code_type_field, $la_code_type ) {
+
+		// Create post
+		$post_id = wp_insert_post( array(
+			'post_type'		=> $this->options['postcode_post_type'],
+			'post_title'	=> $postcode,
+			'post_status'	=> 'publish'
+		) );
+
+		if ( ! is_wp_error( $post_id ) && $post_id ) {
+
+			// Add metadata
+			update_post_meta( $post_id, $la_code_field, $la_code );
+			update_post_meta( $post_id, $la_code_type_field, strtoupper( $la_code_type ) );
+
+		}
+
+		return $post_id;
 	}
 
 	/**
@@ -509,27 +651,27 @@ class Pilau_UK_Mapping {
 					'not_found_in_trash'	=> 'No Postcode ' . $postcode_level . 's found in Trash.'
 				),
 				'public'				=> false,
-				'publicly_queryable'	=> true,
+				'publicly_queryable'	=> false,
 				'show_ui'				=> true,
 				'show_in_nav_menus'		=> false,
 				'show_in_menu'			=> true,
 				'show_in_admin_bar'		=> false,
 				'menu_position'			=> 90,
 				'menu_icon'				=> 'dashicons-location-alt', // @link https://developer.wordpress.org/resource/dashicons/
-				'query_var'				=> true,
+				'query_var'				=> false,
 				'rewrite'				=> false,
-				'capability_type'		=> 'postcode',
+				'capability_type'		=> 'postcode_pukm_' . $postcode_level,
 				'map_meta_cap'			=> false,
 				'capabilities' => array(
-					'publish_posts'			=> 'publish_postcodes',
-					'edit_posts'			=> 'edit_postcodes',
-					'edit_others_posts'		=> 'edit_others_postcodes',
-					'delete_posts'			=> 'delete_postcodes',
-					'delete_others_posts'	=> 'delete_others_postcodes',
-					'read_private_posts'	=> 'read_private_postcodes',
-					'edit_post'				=> 'edit_postcode',
-					'delete_post'			=> 'delete_postcode',
-					'read_post'				=> 'read_postcode',
+					'publish_posts'			=> 'publish_pukm_postcode_' . $postcode_level . 's',
+					'edit_posts'			=> 'edit_pukm_postcode_' . $postcode_level . 's',
+					'edit_others_posts'		=> 'edit_pukm_others_postcode_' . $postcode_level . 's',
+					'delete_posts'			=> 'delete_pukm_postcode_' . $postcode_level . 's',
+					'delete_others_posts'	=> 'delete_pukm_others_postcode_' . $postcode_level . 's',
+					'read_private_posts'	=> 'read_pukm_private_postcode_' . $postcode_level . 's',
+					'edit_post'				=> 'edit_pukm_postcode',
+					'delete_post'			=> 'delete_pukm_postcode',
+					'read_post'				=> 'read_pukm_postcode',
 				),
 				'has_archive'			=> false,
 				'hierarchical'			=> false,
