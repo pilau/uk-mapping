@@ -141,20 +141,7 @@ $check_postcode_straddle_query_submitted = isset( $_POST[ $this->plugin_slug . '
 
 			<?php wp_nonce_field( $this->plugin_slug . '_populate_data', $this->plugin_slug . '_populate_data_nonce' ); ?>
 
-			<table class="form-table">
-				<tbody>
-					<tr valign="top">
-						<th scope="row">
-							<label for="<?php echo $this->plugin_slug . '_populate_post_type'; ?>"><?php _e( 'Populate post type' ); ?></label>
-						</th>
-						<td>
-							<select name="<?php echo $this->plugin_slug . '_populate_post_type'; ?>" id="<?php echo $this->plugin_slug . '_populate_post_type'; ?>" class="regular-text">
-								<option value="<?php echo $this->options['postcode_post_type']; ?>"><?php echo $cpt_args[ $this->options['postcode_post_type'] ]['labels']['name']; ?></option>
-							</select>
-						</td>
-					</tr>
-				</tbody>
-			</table>
+			<p><b><?php _e( 'Postcode type to populate' ) ?>:</b> <?php echo $cpt_args[ $this->options['postcode_post_type'] ]['labels']['name']; ?></p>
 
 			<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e( 'Populate', $this->plugin_slug ); ?>"></p>
 
